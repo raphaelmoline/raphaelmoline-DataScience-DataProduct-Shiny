@@ -1,0 +1,81 @@
+Diamonds: using linear regression to predict prices
+========================================================
+author: Raphael Moline
+date: 15th July 2019
+autosize: true
+
+Exploratory data analysis
+========================================================
+
+Exploratory datat analysis can be done using the shiny app at the link below <https://raphael-moline.shinyapps.io/myapp/>.
+
+- Price increase with size (weigth in carat), although not linearly
+- Clarity, cut and color seem to be having an influence on the price
+- Multiple linear regression will be used to try model the diamond price as a function of these variables
+
+```{r echo = FALSE, out.width= "40%", out.extra='style="float:right; padding:10px"'}
+library(ggplot2)
+library(dplyr)
+library(ggpubr)
+data("diamonds")
+diamonds <- filter(diamonds, carat > 0.5 & carat<2.5)
+g1 <- ggplot(diamonds, aes(x=carat, y=price)) + 
+    geom_point(colour = "blue", alpha = .1) +
+    geom_smooth(colour="red")
+g2 <- ggplot(diamonds, aes(x=log(carat), y=log(price))) + 
+    geom_point(colour = "blue", alpha = .1) +
+    geom_smooth(colour="red")
+g3 <- ggplot(filter(diamonds, carat<=2 & carat > 0.5), aes(x=log(carat), y=log(price))) + 
+    geom_point(colour = "blue", alpha = .1) +
+    geom_smooth(colour="red")
+g4 <- ggplot(filter(diamonds, carat>2 & carat<2.5), aes(x=log(carat), y=log(price))) + 
+    geom_point(colour = "blue", alpha = .1) +
+    geom_smooth(colour="red")
+ggarrange(g1,g2,g3,g4,ncol = 2, nrow = 2)
+```
+
+Following some exploratory data analysis with the shiny app:
+
+1) I removed diamonds with weights below 0.5 and above 2.5 carats
+
+2) I split the data at 2 carats
+
+3) log(price) vs log(carat) seems to exhibit more linearity than price vs carat
+
+
+Running linear regression on diamonds (less than 2 carats)
+========================================================
+
+```{r}
+diamonds <- filter(diamonds, carat<=2)
+fitlog_low <- lm(log(price) ~ log(carat), diamonds)
+fit_cut <- lm(log(price) ~ log(carat) + cut, diamonds)
+fit_clarity <- lm(log(price) ~ log(carat) + clarity, diamonds)
+fit_color <- lm(log(price) ~ log(carat) + color, diamonds)
+fit_all <- lm(log(price) ~ log(carat) + cut + color + clarity, diamonds)
+c(summary(fitlog_low)$r.squared, summary(fit_cut)$r.squared,summary(fit_color)$r.squared,
+  summary(fit_clarity)$r.squared, summary(fit_all)$r.squared)
+```
+
+- Clarity seems to have the the biggest influence after carat
+- Combining with color and cut gets better results
+
+Looking at prices and residuals
+========================================================
+
+```{r , out.width= "40%", out.extra='style="float:right; padding:10px"'}
+carat <- exp(fit_all$model$`log(carat)`)
+price <- exp(fit_all$model$`log(price)`)
+price_res <- (exp(fit_all$fitted.values) - price)
+simul = cbind(carat, price_res) %>% tbl_df()
+ggplot(simul, aes(x=carat, y=price_res)) + geom_point(colour = "blue", alpha = .1) +
+    geom_smooth(colour="red")
+```
+
+Residuals are displaying non normality characteristics:
+
+1) heteroskedasticity: the variation is higher for big diamonds. This is to be expected due to the log regression though
+
+2) bias: it is not centered on zero, expected residual changes according to the size
+
+

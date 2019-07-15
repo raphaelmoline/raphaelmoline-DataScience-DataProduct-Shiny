@@ -37,3 +37,14 @@ summary(fit_cut)$r.squared
 summary(fit_clarity)$r.squared
 summary(fit_color)$r.squared
 summary(fit_all)$r.squared
+
+
+
+price <- exp(fit_all$model$`log(price)`)
+carat <- exp(fit_all$model$`log(carat)`)
+price_res <- (exp(fit_all$fitted.values) - price)
+simul = cbind(price, carat, price_res) %>% tbl_df()
+
+g5 <- ggplot(simul, aes(x=carat, y=price)) + geom_point(colour = "blue", alpha = .1) 
+g6 <- ggplot(simul, aes(x=carat, y=price_res)) + geom_point(colour = "blue", alpha = .1) 
+ggarrange(g5,g6,ncol = 2)
